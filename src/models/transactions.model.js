@@ -1,7 +1,7 @@
 import db from '../data/db.js';
 
-export function getAll() {
-  return db.prepare(`
+export function getAll({ type, category_id, from, to } = {}) {
+  let query = `
     SELECT
       transactions.id,
       transactions.type,
@@ -11,10 +11,39 @@ export function getAll() {
       transactions.date
     FROM transactions
     JOIN categories ON transactions.category_id = categories.id
-    ORDER BY transactions.date DESC
-  `).all();
-}
+  `;
 
+  const conditions = [];
+  const params = [];
+
+  if (type) {
+    conditions.push('transactions.type = ?');
+    params.push(type);
+  }
+
+  if (category_id) {
+    conditions.push('transactions.category_id = ?');
+    params.push(category_id);
+  }
+
+  if (from) {
+    conditions.push('transactions.date >= ?');
+    params.push(from);
+  }
+
+  if (to) {
+    conditions.push('transactions.date <= ?');
+    params.push(to);
+  }
+
+  if (conditions.length > 0) {
+    query += ' WHERE ' + conditions.join(' AND ');
+  }
+
+  query += ' ORDER BY transactions.date DESC';
+
+  return db.prepare(query).all(...params);
+}
 export function create({ type, amount, category_id, description, date }) {
   const result = db
     .prepare(
